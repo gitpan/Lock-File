@@ -1,6 +1,6 @@
 package Lock::File;
 {
-  $Lock::File::VERSION = '1.00';
+  $Lock::File::VERSION = '1.01';
 }
 
 # ABSTRACT: file locker with an automatic out-of-scope unlocking mechanism
@@ -17,7 +17,7 @@ use POSIX qw(:errno_h);
 use Carp;
 
 use base qw(Exporter);
-our @EXPORT_OK = qw( lockf unlockf lockf_multi lockf_any );
+our @EXPORT_OK = qw( lockfile lockfile_multi lockfile_any lockf lockf_multi lockf_any );
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 sub DESTROY {
@@ -45,15 +45,20 @@ sub _validate {
     die "Unexpected options: ".join(',', keys %$opts_copy) if %$opts_copy;
 }
 
-sub lockf ($;$) {
+sub lockfile ($;$) {
     return __PACKAGE__->new(@_);
+}
+
+sub lockf ($;$) {
+    warn "lockf() is deprecated, use lockfile() instead";
+    goto &lockfile;
 }
 
 sub new {
     my $class = shift;
     my ($param, $opts) = @_;
     if (@_ > 2 or @_ < 1) {
-        croak "invalid lockf arguments";
+        croak "invalid lockfile arguments";
     }
 
     $opts ||= {};
@@ -71,7 +76,7 @@ sub new {
         $fh = $param;
     }
 
-    $fh = _lockf_and_check($fh, $fname, $opts);
+    $fh = _lock_and_check($fh, $fname, $opts);
     unless ($fh) {
         return;
     }
@@ -102,17 +107,17 @@ sub _open {
     return $fh;
 }
 
-sub _lockf_and_check {
+sub _lock_and_check {
     my ($fh, $fname, $opts) = @_;
 
-    unless (defined $fname) { # no unlink/lockf race when locking an already opened filehandle
-        return _lockf(@_) ? $fh : undef;
+    unless (defined $fname) { # no unlink/lockile race when locking an already opened filehandle
+        return _lock(@_) ? $fh : undef;
     }
 
     while () {
         $fh = _open($opts->{mode}, $fname);
-        my $lockf = _lockf($fh, $fname, $opts);
-        return unless $lockf;
+        my $lock = _lock($fh, $fname, $opts);
+        return unless $lock;
 
         unless (-e $fname) {
             $log->debug("$fname: locked but removed");
@@ -131,7 +136,7 @@ sub _xflock {
     flock $fh, $mode or die "flock failed: $!";
 }
 
-sub _lockf {
+sub _lock {
     my ($fh, $fname, $opts) = @_;
 
     $fname ||= ''; # TODO - discover $fname from $fh, it's possible in most cases with some /proc magic
@@ -167,14 +172,14 @@ sub _lockf {
     return 1;
 }
 
-sub lockf_multi ($$;$) {
+sub lockfile_multi ($$;$) {
     my ($fname, $max, $opts) = @_;
     $opts ||= {};
     _validate($opts, qw/ remove mode /);
 
     # to make sure no one will mess up the things
     # TODO - apply opts to metalock too?
-    my $metalock = lockf("$fname.meta", { remove => 1 });
+    my $metalock = lockfile("$fname.meta", { remove => 1 });
 
     my %flist = map { $_ => 1 } grep { /^\Q$fname\E\.\d+$/ } glob "\Q$fname\E.*";
 
@@ -183,9 +188,9 @@ sub lockf_multi ($$;$) {
 
     # try to get lock on existing file
     for my $file (keys %flist) {
-        my $lockf = lockf($file, { blocking => 0, %$opts });
-        $locked++ unless $lockf;
-        $ret ||= $lockf;
+        my $lock = lockfile($file, { blocking => 0, %$opts });
+        $locked++ unless $lock;
+        $ret ||= $lock;
         if ($locked >= $max) {
             undef $ret;
             last;
@@ -197,9 +202,9 @@ sub lockf_multi ($$;$) {
         for my $i (0 .. ($max-1)) {
             my $file = "$fname.$i";
             next if $flist{$file};
-            my $lockf = lockf($file, { blocking => 0, %$opts });
-            die "Unable to obtain lock on new multilock file $file" unless $lockf; # this should never happen
-            $ret = $lockf;
+            my $lock = lockfile($file, { blocking => 0, %$opts });
+            die "Unable to obtain lock on new multilock file $file" unless $lock; # this should never happen
+            $ret = $lock;
             last;
         }
     }
@@ -208,17 +213,27 @@ sub lockf_multi ($$;$) {
     return undef;
 }
 
-sub lockf_any ($;$) {
+sub lockf_multi {
+    warn "lockf_multi() is deprecated, use lockfile_multi() instead";
+    goto &lockfile_multi;
+}
+
+sub lockfile_any ($;$) {
     my ($flist, $opts) = @_;
     $opts ||= {};
     _validate($opts, qw/ remove mode /);
 
     for my $fname (@$flist) {
-        my $lockf = lockf($fname, { blocking => 0, %$opts });
-        return $lockf if $lockf;
+        my $lock = lockfile($fname, { blocking => 0, %$opts });
+        return $lock if $lock;
     }
 
     return undef;
+}
+
+sub lockf_any {
+    warn "lockf_any() is deprecated, use lockfile_any() instead";
+    goto &lockfile_any;
 }
 
 sub name {
@@ -236,9 +251,14 @@ sub unshare {
     _xflock($self->{_fh}, LOCK_EX);
 }
 
-sub unlockf {
+sub unlock {
     my $self = shift;
     $self->DESTROY();
+}
+
+sub unlockf {
+    warn "unlockf() method is deprecated, use ->unlock() instead";
+    goto &{ $_[0]->can('unlock') };
 }
 
 
@@ -253,49 +273,49 @@ Lock::File - file locker with an automatic out-of-scope unlocking mechanism
 
 =head1 VERSION
 
-version 1.00
+version 1.01
 
 =head1 SYNOPSIS
 
-    use Lock::File qw(lockf);
+    use Lock::File qw(lockfile);
 
     # blocking mode is default
-    my $lock = lockf('/var/lock/my_script.lock');
+    my $lock = lockfile('/var/lock/my_script.lock');
 
     # unlock
     undef $lock;
 
     # or:
-    $lock->unlockf();
+    $lock->unlock();
 
     # print filename
     say $lock->name;
 
-    $lock = lockf('./my.lock', { blocking => 0 }) or die "Already locked";
+    $lock = lockfile('./my.lock', { blocking => 0 }) or die "Already locked";
 
     # lock an open file:
-    $lock = lockf($fh);
+    $lock = lockfile($fh);
 
-    $lock = lockf_multi('./my.lock', 5); # will try to lock on files "my.lock.0", "my.lock.1" .. "my.lock.4"
+    $lock = lockfile_multi('./my.lock', 5); # will try to lock on files "my.lock.0", "my.lock.1" .. "my.lock.4"
 
-    $lock = lockf_any('foo', 'bar');
+    $lock = lockfile_any('foo', 'bar');
 
 =head1 DESCRIPTION
 
-C<lockf> is a perlfunc C<flock> wrapper. The lock is autotamically released as soon as the assotiated object is
+C<lockfile> is a perlfunc C<flock> wrapper. The lock is autotamically released as soon as the assotiated object is
 no longer referenced.
 
-C<lockf_multi> makes non-blocking C<lockf> calls for multiple files and throws and exception if all are locked.
+C<lockfile_multi> makes non-blocking C<lockfile> calls for multiple files and throws and exception if all are locked.
 
 =head1 FUNCTIONS
 
 =over
 
-=item B<lockf($file, $options)>
+=item B<lockfile($file, $options)>
 
 Create a Lock instance. Always save the result in some variable(s), otherwise the lock will be released immediately.
 
-The lock is automatically released when all the references to the Lockf object are lost. The lockf mandatory parameter
+The lock is automatically released when all the references to the Lockf object are lost. The C<$file> mandatory parameter
 can be either a string representing a filename or a reference to an already opened filehandle. The second optional
 parameter is a hash of boolean options. Supported options are:
 
@@ -337,15 +357,15 @@ Alternatively, you can use OO interface:
 
     my $lock = Lock::File->new($file, $options);
 
-=item B<lockf_multi($file, $max, $options)>
+=item B<lockfile_multi($file, $max, $options)>
 
-Calls non-blocking C<lockf>'s for files from C<$fname.0> to C<$fname.$max-1>, and returns a C<Lock::File> object for the first successful lock.
+Calls non-blocking C<lockfile>'s for files from C<$fname.0> to C<$fname.$max-1>, and returns a C<Lock::File> object for the first successful lock.
 
 Only I<remove> and I<mode> options are supported.
 
-=item B<lockf_any($filenames, $options)>
+=item B<lockfile_any($filenames, $options)>
 
-Same as C<lockf_multi>, but accepts arrayref of filenames.
+Same as C<lockfile_multi>, but accepts arrayref of filenames.
 
 =back
 
@@ -353,9 +373,9 @@ Same as C<lockf_multi>, but accepts arrayref of filenames.
 
 =over
 
-=item B<unlockf()>
+=item B<name()>
 
-Force the lock to be released independent of how many references to the object are still alive.
+Gives the name of the file, as it was when the lock was taken.
 
 =item B<share()>
 
@@ -365,9 +385,9 @@ Transform exclusive lock to shared.
 
 Transform shared lock to exclusive. Can block if other shared/exclusive locks are held by some other processes.
 
-=item B<name()>
+=item B<unlock()>
 
-Gives the name of the file, as it was when the lock was taken.
+Force the lock to be released independent of how many references to the object are still alive.
 
 =back
 
@@ -394,6 +414,14 @@ Second, there are so many locking modules that choosing a good name is *hard*.
 Third, maybe I'm going to release L<Lock::Zookeeper> with the similar interface in the future.
 
 =back
+
+=head1 DEPRECATED FUNCTIONS AND METHODS
+
+C<lockf()>, C<lockf_multi()> and C<lockf_any()> functions, and C<unlockf()> method were renamed to C<lockfile.*> in 1.01 release.
+
+It's unlikely that many people used 1.00 version in important code because it's been only a week since its release, but I'm keeping them around for a few releases anyway.
+
+In other words, they are all exported on C<:all>, and they print a warning message.
 
 =head1 SIMILAR MODULES
 

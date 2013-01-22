@@ -8,6 +8,7 @@ build_requires:
   Test::Class: 0
   Test::Fatal: 0
   Test::More: 0
+  Test::Warn: 0
   Time::HiRes: 0
   autodie: 0
 configure_requires:
@@ -32,4 +33,4 @@ resources:
   bugtracker: http://github.com/berekuk/Lock-File/issues
   homepage: http://github.com/berekuk/Lock-File/wiki
   repository: git://github.com/berekuk/Lock-File.git
-version: 1.00
+version: 1.01

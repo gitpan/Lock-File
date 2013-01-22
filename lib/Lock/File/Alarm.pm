@@ -1,6 +1,6 @@
 package Lock::File::Alarm;
 {
-  $Lock::File::Alarm::VERSION = '1.00';
+  $Lock::File::Alarm::VERSION = '1.01';
 }
 
 use strict;
@@ -38,11 +38,11 @@ Lock::File::Alarm - alarm guard
 
 =head1 VERSION
 
-version 1.00
+version 1.01
 
 =head1 DESCRIPTION
 
-This module is necessary to implement timeouts in C<Ubic::Lockf> class.
+This module is necessary to implement timeouts in C<Lock::File> class.
 
 =head1 METHODS
 
