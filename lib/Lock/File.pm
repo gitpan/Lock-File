@@ -1,6 +1,6 @@
 package Lock::File;
 {
-  $Lock::File::VERSION = '1.01';
+  $Lock::File::VERSION = '1.02';
 }
 
 # ABSTRACT: file locker with an automatic out-of-scope unlocking mechanism
@@ -64,8 +64,8 @@ sub new {
     $opts ||= {};
     _validate($opts, qw/ blocking shared timeout mode remove /);
 
-    if (exists $opts->{blocking} and defined $opts->{timeout}) {
-        die "At most one of 'timeout' and 'blocking' options is allowed";
+    if (exists $opts->{blocking} and not $opts->{blocking} and defined $opts->{timeout}) {
+        die "non-blocking mode is incompatible with timeout option";
     }
     $opts = {%defaults, %$opts};
 
@@ -265,6 +265,7 @@ sub unlockf {
 1;
 
 __END__
+
 =pod
 
 =head1 NAME
@@ -273,7 +274,7 @@ Lock::File - file locker with an automatic out-of-scope unlocking mechanism
 
 =head1 VERSION
 
-version 1.01
+version 1.02
 
 =head1 SYNOPSIS
 
@@ -340,6 +341,8 @@ If set, specifies the wait timeout for acquiring the blocking lock.
 Throws an exception on timeout.
 
 The value of 0 is equivalent to C<< blocking => 0 >> option, except that it throws an exception instead of returning undef if the file is already locked.
+
+I<blocking> is assumed to be true, and specifying C<< blocking => 0 >> explicitly is considered an error.
 
 =item I<mode>
 
@@ -459,4 +462,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

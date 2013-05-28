@@ -1,6 +1,6 @@
 package Lock::File::Alarm;
 {
-  $Lock::File::Alarm::VERSION = '1.01';
+  $Lock::File::Alarm::VERSION = '1.02';
 }
 
 use strict;
@@ -30,6 +30,7 @@ sub DESTROY ($) {
 1;
 
 __END__
+
 =pod
 
 =head1 NAME
@@ -38,7 +39,7 @@ Lock::File::Alarm - alarm guard
 
 =head1 VERSION
 
-version 1.01
+version 1.02
 
 =head1 DESCRIPTION
 
@@ -66,4 +67,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

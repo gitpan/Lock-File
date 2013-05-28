@@ -1,6 +1,9 @@
 Revision history for Lock-File
 
-1.01    2013-01-22
+1.02    2013-05-28
+    * timeout option is compatible with blocking=1, but still incompatible with blocking=0
+
+1.01    2013-01-23
     * rename lockf() to lockfile(), lockf_multi() to lockfile_multi(), lockf_any() to lockfile_any()
     * ->unlock() method
     * deprecate all old *lockf* functions and method
