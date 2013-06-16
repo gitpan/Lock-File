@@ -1,6 +1,6 @@
 package Lock::File;
 {
-  $Lock::File::VERSION = '1.02';
+  $Lock::File::VERSION = '1.03';
 }
 
 # ABSTRACT: file locker with an automatic out-of-scope unlocking mechanism
@@ -86,6 +86,20 @@ sub new {
         _fname => $fname,
         _remove => $opts->{remove},
     } => $class;
+}
+
+sub _log_message ($;$) {
+    my ($bang, $question) = @_;
+    my @msg;
+    if ($bang) {
+        push @msg, "error ".int($bang)." '$bang'";
+    }
+    if (defined $question and $question > 0) {
+        push @msg, "kill by signal ".($question & 127) if ($question & 127);
+        push @msg, "core dumped" if ($question & 128);
+        push @msg, "exit code ".($question >> 8) if $question >> 8;
+    }
+    return join ", ", @msg;
 }
 
 sub _open {
@@ -274,7 +288,7 @@ Lock::File - file locker with an automatic out-of-scope unlocking mechanism
 
 =head1 VERSION
 
-version 1.02
+version 1.03
 
 =head1 SYNOPSIS
 

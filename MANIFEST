@@ -11,5 +11,3 @@ t/locale.t
 t/release-pod-coverage.t
 t/release-pod-syntax.t
 t/test.t
-tfiles/lock
-tfiles/lock.other

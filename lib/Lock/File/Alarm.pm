@@ -1,6 +1,6 @@
 package Lock::File::Alarm;
 {
-  $Lock::File::Alarm::VERSION = '1.02';
+  $Lock::File::Alarm::VERSION = '1.03';
 }
 
 use strict;
@@ -39,7 +39,7 @@ Lock::File::Alarm - alarm guard
 
 =head1 VERSION
 
-version 1.02
+version 1.03
 
 =head1 DESCRIPTION
 
